@@ -1,0 +1,12 @@
+fastapi==0.111.0
+uvicorn==0.29.0
+joblib==1.4.0
+scikit-learn==1.4.2
+shap==0.45.0
+numpy==1.26.4
+pandas==2.2.2
+requests==2.31.0
+opencv-python-headless==4.9.0.80
+scikit-image==0.22.0
+Pillow==10.3.0
+python-multipart==0.0.9

@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Nimbus — Weather Classifier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@300;400&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0c1017;--s:#121a24;--s2:#18222e;--s3:#1e2d3d;
+  --b:#1e2d3d;--b2:#253647;
+  --t:#dce8f5;--t2:#7a96b3;--t3:#3d5570;
+  --accent:#4f9cf9;--adim:rgba(79,156,249,.12);
+  --green:#34d399;--gdim:rgba(52,211,153,.1);
+  --amber:#fbbf24;--red:#f87171;
+  --r:12px;--r2:18px;
+  --serif:'Instrument Serif',Georgia,serif;
+  --sans:'Geist',system-ui,sans-serif;
+  --mono:'Geist Mono',monospace;
+}
+html{background:var(--bg);color:var(--t);font-family:var(--sans);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.page{max-width:880px;margin:0 auto;padding:52px 24px 100px}
+
+/* ── Header ── */
+.hdr{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:32px;border-bottom:1px solid var(--b);margin-bottom:40px}
+.logo-serif{font-family:var(--serif);font-size:2.2rem;font-style:italic;letter-spacing:-.5px;line-height:1}
+.logo-serif em{font-style:normal;color:var(--accent)}
+.logo-desc{font-size:13px;color:var(--t3);margin-top:3px;font-family:var(--mono)}
+.hdr-right{text-align:right}
+.hdr-tag{font-family:var(--mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--t3)}
+.hdr-acc{font-family:var(--mono);font-size:12px;color:var(--green);margin-top:4px}
+
+/* ── Tabs ── */
+.tabs{display:flex;gap:2px;padding:3px;background:var(--s);border:1px solid var(--b);border-radius:10px;width:fit-content;margin-bottom:28px}
+.tab{padding:8px 22px;border-radius:8px;border:none;cursor:pointer;font-family:var(--sans);font-size:13px;font-weight:500;color:var(--t3);background:transparent;transition:all .15s}
+.tab.on{background:var(--s3);color:var(--t);border:1px solid var(--b2)}
+.tab:hover:not(.on){color:var(--t2)}
+
+.panel{display:none}.panel.on{display:block}
+
+/* ── Search ── */
+.srow{position:relative;margin-bottom:12px}
+.sinput{width:100%;padding:13px 108px 13px 44px;background:var(--s);border:1px solid var(--b);border-radius:var(--r);color:var(--t);font-family:var(--sans);font-size:15px;outline:none;transition:border-color .15s}
+.sinput:focus{border-color:var(--accent)}
+.sinput::placeholder{color:var(--t3)}
+.sicon{position:absolute;left:15px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--t3);pointer-events:none;font-style:normal}
+.sbtn{position:absolute;right:6px;top:50%;transform:translateY(-50%);padding:7px 20px;background:var(--accent);border:none;border-radius:9px;color:#fff;font-family:var(--sans);font-weight:600;font-size:13px;cursor:pointer;transition:opacity .15s;white-space:nowrap}
+.sbtn:hover{opacity:.85}.sbtn:disabled{opacity:.35;cursor:not-allowed}
+
+/* ── Chips ── */
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{padding:4px 12px;border-radius:20px;border:1px solid var(--b);background:transparent;color:var(--t3);font-size:12px;font-family:var(--mono);cursor:pointer;transition:all .15s}
+.chip:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ── Drop zone ── */
+.dz{border:1.5px dashed var(--b2);border-radius:var(--r2);padding:52px 32px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;position:relative;background:var(--s)}
+.dz:hover,.dz.drag{border-color:var(--accent);background:var(--adim)}
+.dz input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.dz-icon{width:44px;height:44px;border-radius:10px;background:var(--s3);border:1px solid var(--b2);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:18px;color:var(--t2)}
+.dz-title{font-size:15px;font-weight:500;margin-bottom:4px}
+.dz-sub{font-size:12px;color:var(--t3);font-family:var(--mono)}
+.dz-preview{margin-top:18px;display:none}
+.dz-preview img{max-height:180px;border-radius:10px;border:1px solid var(--b)}
+.abtn{margin-top:14px;padding:10px 24px;background:var(--s);border:1px solid var(--b2);border-radius:var(--r);color:var(--t2);font-family:var(--sans);font-weight:500;font-size:13px;cursor:pointer;transition:all .15s}
+.abtn:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+.abtn:disabled{opacity:.35;cursor:not-allowed}
+
+/* ── Error ── */
+.err{display:none;padding:12px 16px;background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.2);border-radius:var(--r);color:#fca5a5;font-size:12px;font-family:var(--mono);margin-bottom:14px}
+
+/* ── Loader ── */
+.ld{display:none;padding:56px 0;text-align:center}
+.ld-dots{display:flex;gap:5px;justify-content:center;margin-bottom:12px}
+.ld-dots span{width:5px;height:5px;border-radius:50%;background:var(--accent);animation:ldp 1.1s ease-in-out infinite}
+.ld-dots span:nth-child(2){animation-delay:.18s}.ld-dots span:nth-child(3){animation-delay:.36s}
+@keyframes ldp{0%,100%{opacity:.2;transform:scale(.7)}50%{opacity:1;transform:scale(1)}}
+.ld p{font-size:11px;font-family:var(--mono);color:var(--t3);letter-spacing:2px}
+
+/* ── Results ── */
+#results{display:none}
+
+/* ── Hero ── */
+.hero{display:flex;gap:28px;align-items:flex-start;padding:36px;background:var(--s);border:1px solid var(--b2);border-radius:var(--r2);margin-bottom:16px}
+.hero-icon-wrap{flex-shrink:0;width:88px;padding:20px;background:var(--s2);border:1px solid var(--b);border-radius:var(--r2);text-align:center}
+.hero-emoji{font-size:2.8rem;line-height:1;display:block;margin-bottom:6px}
+.hero-cond{font-family:var(--mono);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3)}
+.hero-body{flex:1;min-width:0}
+.hero-mode{font-family:var(--mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--t3);margin-bottom:6px}
+.hero-name{font-family:var(--serif);font-size:2.6rem;font-style:italic;line-height:1.1;text-transform:capitalize;margin-bottom:4px}
+.hero-sub{font-size:12px;color:var(--t3);font-family:var(--mono);margin-bottom:14px}
+.conf-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:var(--gdim);border:1px solid rgba(52,211,153,.2);border-radius:20px;font-family:var(--mono);font-size:12px;color:var(--green)}
+.conf-dot{width:5px;height:5px;border-radius:50%;background:var(--green);flex-shrink:0}
+.hero-expl{margin-top:14px;padding:13px 16px;background:var(--s2);border-radius:8px;border-left:2px solid var(--accent);font-size:13px;color:var(--t2);line-height:1.6}
+
+/* ── Grid ── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+@media(max-width:580px){.g2{grid-template-columns:1fr}}
+
+/* ── Card ── */
+.card{background:var(--s);border:1px solid var(--b);border-radius:var(--r2);padding:22px}
+.ctitle{font-family:var(--mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--t3);margin-bottom:16px}
+
+/* ── Readings ── */
+.rg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.ri{background:var(--s2);border:1px solid var(--b);border-radius:10px;padding:11px 8px;text-align:center}
+.rv{font-size:16px;font-weight:600;color:var(--t);line-height:1.2}
+.rl{font-family:var(--mono);font-size:9px;color:var(--t3);letter-spacing:1.2px;text-transform:uppercase;margin-top:3px}
+
+/* ── Conf bars ── */
+.cbr{margin-bottom:10px}
+.cbr-h{display:flex;justify-content:space-between;font-size:13px;text-transform:capitalize;margin-bottom:4px;color:var(--t2)}
+.cbr-h b{font-family:var(--mono);font-size:12px;font-weight:400;color:var(--accent)}
+.cbt{height:4px;background:var(--s3);border-radius:2px;overflow:hidden}
+.cbf{height:100%;background:var(--accent);border-radius:2px;transition:width 1s cubic-bezier(.4,0,.2,1)}
+
+/* ── SHAP ── */
+.sr{display:flex;align-items:center;gap:9px;margin-bottom:8px}
+.sl{font-family:var(--mono);font-size:11px;color:var(--t2);width:138px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:capitalize}
+.st{flex:1;height:5px;background:var(--s3);border-radius:3px;overflow:hidden}
+.sp{height:100%;background:var(--green);border-radius:3px}
+.sn{height:100%;background:var(--red);border-radius:3px}
+.sv{font-family:var(--mono);font-size:10px;color:var(--t3);width:44px;text-align:right;flex-shrink:0}
+
+/* ── Modality ── */
+.mods{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px;padding-top:16px;border-top:1px solid var(--b)}
+.mod{padding:14px;border-radius:10px}
+.mod.img{background:var(--adim);border:1px solid rgba(79,156,249,.2)}
+.mod.sen{background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2)}
+.mod-n{font-size:22px;font-weight:600;margin-bottom:2px}
+.mod.img .mod-n{color:var(--accent)}.mod.sen .mod-n{color:var(--amber)}
+.mod-l{font-family:var(--mono);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3)}
+
+/* ── Footer ── */
+.rfooter{font-family:var(--mono);font-size:10px;color:var(--t3);text-align:center;margin-top:20px;letter-spacing:1.5px}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="hdr">
+    <div>
+      <div class="logo-serif">N<em>i</em>mbus</div>
+      <div class="logo-desc">Weather condition classifier</div>
+    </div>
+    <div class="hdr-right">
+      <div class="hdr-tag">ELE 4409 · Mini Project</div>
+      <div class="hdr-acc">KNN · 88% accuracy · 3 classes</div>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab on" onclick="sw('city')">City prediction</button>
+    <button class="tab" onclick="sw('image')">Sky photo</button>
+  </div>
+
+  <div class="panel on" id="p-city">
+    <div class="srow">
+      <i class="sicon">⌕</i>
+      <input class="sinput" id="ci" type="text" placeholder="Enter any city — Chennai, London, Tokyo..."/>
+      <button class="sbtn" id="cb" onclick="pc()">Predict</button>
+    </div>
+    <div class="chips">
+      <span class="chip" onclick="qc('Chennai')">Chennai</span>
+      <span class="chip" onclick="qc('Mumbai')">Mumbai</span>
+      <span class="chip" onclick="qc('Delhi')">Delhi</span>
+      <span class="chip" onclick="qc('Bangalore')">Bangalore</span>
+      <span class="chip" onclick="qc('London')">London</span>
+      <span class="chip" onclick="qc('Tokyo')">Tokyo</span>
+      <span class="chip" onclick="qc('Dubai')">Dubai</span>
+      <span class="chip" onclick="qc('New York')">New York</span>
+    </div>
+  </div>
+
+  <div class="panel" id="p-image">
+    <div class="dz" id="dz">
+      <input type="file" id="fi" accept="image/*" onchange="ofs(event)"/>
+      <div class="dz-icon">↑</div>
+      <div class="dz-title">Drop a sky photograph here</div>
+      <div class="dz-sub">39 visual features extracted via OpenCV · GLCM · Canny</div>
+      <div class="dz-preview" id="dpp"><img id="dpi" src="" alt=""/></div>
+    </div>
+    <button class="abtn" id="ab" disabled onclick="pi()">Analyse image</button>
+  </div>
+
+  <div class="err" id="err"></div>
+  <div class="ld" id="ld"><div class="ld-dots"><span></span><span></span><span></span></div><p>RUNNING MODEL</p></div>
+
+  <div id="results">
+    <div class="hero">
+      <div class="hero-icon-wrap">
+        <span class="hero-emoji" id="hEmoji"></span>
+        <div class="hero-cond" id="hCond"></div>
+      </div>
+      <div class="hero-body">
+        <div class="hero-mode" id="hMode"></div>
+        <div class="hero-name" id="hName"></div>
+        <div class="hero-sub" id="hSub"></div>
+        <div class="conf-badge"><div class="conf-dot"></div><span id="hConf"></span>&nbsp;confidence</div>
+        <div class="hero-expl" id="hExpl"></div>
+      </div>
+    </div>
+
+    <div class="g2">
+      <div class="card"><div class="ctitle" id="rTitle"></div><div id="rGrid"></div></div>
+      <div class="card"><div class="ctitle">Per-class confidence</div><div id="cBars"></div></div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <div class="ctitle">Probability distribution</div>
+      <canvas id="ch" style="max-height:200px"></canvas>
+    </div>
+
+    <div class="card">
+      <div class="ctitle">SHAP feature attribution</div>
+      <div id="sRows"></div>
+      <div class="mods" id="mods" style="display:none">
+        <div class="mod img"><div class="mod-n" id="ip">—</div><div class="mod-l">Image features</div></div>
+        <div class="mod sen"><div class="mod-n" id="tp">—</div><div class="mod-l">Sensor features</div></div>
+      </div>
+    </div>
+
+    <div class="rfooter" id="rf"></div>
+  </div>
+
+</div>
+<script>
+const API='http://localhost:8000';
+const EMOJI={sunny:'☀️',rain:'🌧️',cloudy:'☁️',fog:'🌫️',snow:'❄️'};
+let chart=null,selFile=null;
+
+function sw(t){
+  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('on',(t==='city'?0:1)===i));
+  document.getElementById('p-city').classList.toggle('on',t==='city');
+  document.getElementById('p-image').classList.toggle('on',t==='image');
+  hide();
+}
+function hide(){['results','ld','err'].forEach(id=>{document.getElementById(id).style.display='none'});}
+function showLd(){hide();document.getElementById('ld').style.display='block';}
+function hideLd(){document.getElementById('ld').style.display='none';}
+function showErr(m){hideLd();const e=document.getElementById('err');e.textContent=m;e.style.display='block';}
+
+function qc(c){document.getElementById('ci').value=c;pc();}
+document.getElementById('ci').addEventListener('keydown',e=>{if(e.key==='Enter')pc();});
+
+async function pc(){
+  const c=document.getElementById('ci').value.trim();if(!c)return;
+  showLd();document.getElementById('cb').disabled=true;
+  try{
+    const fd=new FormData();fd.append('city',c);
+    const r=await fetch(`${API}/predict/city`,{method:'POST',body:fd});
+    const d=await r.json();if(!r.ok)throw new Error(d.detail||'Failed');
+    render(d);
+  }catch(e){showErr(e.message);}
+  finally{hideLd();document.getElementById('cb').disabled=false;}
+}
+
+const dz=document.getElementById('dz');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag');});
+dz.addEventListener('dragleave',()=>dz.classList.remove('drag'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag');const f=e.dataTransfer.files[0];if(f){document.getElementById('fi').files=e.dataTransfer.files;ofs({target:{files:[f]}});}});
+
+function ofs(e){
+  const f=e.target.files[0];if(!f)return;selFile=f;
+  const rd=new FileReader();
+  rd.onload=ev=>{document.getElementById('dpi').src=ev.target.result;document.getElementById('dpp').style.display='block';document.getElementById('ab').disabled=false;};
+  rd.readAsDataURL(f);
+}
+
+async function pi(){
+  if(!selFile)return;showLd();
+  try{
+    const fd=new FormData();fd.append('file',selFile);
+    const r=await fetch(`${API}/predict/image`,{method:'POST',body:fd});
+    const d=await r.json();if(!r.ok)throw new Error(d.detail||'Failed');
+    render(d);
+  }catch(e){showErr(e.message);}
+  finally{hideLd();}
+}
+
+function render(d){
+  const isC=d.mode==='city';
+  document.getElementById('hEmoji').textContent=d.emoji||EMOJI[d.prediction]||'🌤️';
+  document.getElementById('hCond').textContent=d.prediction.toUpperCase();
+  document.getElementById('hMode').textContent=isC?'live sensor data':'sky image analysis';
+  document.getElementById('hName').textContent=isC?`${d.city}, ${d.country}`:(d.filename||'Uploaded image');
+  document.getElementById('hSub').textContent=isC?d.local_time:'39 visual features extracted';
+  document.getElementById('hConf').textContent=`${d.confidence}%`;
+  document.getElementById('hExpl').textContent=d.explanation;
+
+  const rt=document.getElementById('rTitle'),rg=document.getElementById('rGrid');
+  if(isC){
+    rt.textContent='Live weather readings';
+    const r=d.live_readings;
+    const its=[{v:`${r.temperature}°C`,l:'Temp'},{v:`${r.feels_like}°C`,l:'Feels'},{v:`${r.humidity}%`,l:'Humidity'},{v:`${r.wind} km/h`,l:'Wind'},{v:`${r.visibility} km`,l:'Visibility'},{v:`UV ${r.uv_index}`,l:'UV'},{v:`${r.precipitation}mm`,l:'Precip'},{v:`${r.pressure}mb`,l:'Pressure'},{v:`${r.cloud_pct}%`,l:'Cloud'}];
+    rg.innerHTML=`<div class="rg">${its.map(i=>`<div class="ri"><div class="rv">${i.v}</div><div class="rl">${i.l}</div></div>`).join('')}</div>`;
+  }else{
+    rt.textContent='Extracted image features';
+    const f=d.image_features;
+    const its=[{v:f.brightness_mean.toFixed(1),l:'Brightness'},{v:f.saturation_mean.toFixed(1),l:'Saturation'},{v:(f.cloud_coverage*100).toFixed(1)+'%',l:'Cloud cover'},{v:(f.dark_ratio*100).toFixed(1)+'%',l:'Dark ratio'},{v:f.blue_dominance.toFixed(1),l:'Blue dom'},{v:(f.edge_density*100).toFixed(1)+'%',l:'Edge density'}];
+    rg.innerHTML=`<div class="rg">${its.map(i=>`<div class="ri"><div class="rv">${i.v}</div><div class="rl">${i.l}</div></div>`).join('')}</div>`;
+  }
+
+  const sorted=Object.entries(d.confidence_scores).sort((a,b)=>b[1]-a[1]);
+  document.getElementById('cBars').innerHTML=sorted.map(([cls,pct])=>`<div class="cbr"><div class="cbr-h"><span>${cls}</span><b>${pct}%</b></div><div class="cbt"><div class="cbf" style="width:${pct}%"></div></div></div>`).join('');
+
+  if(chart)chart.destroy();
+  chart=new Chart(document.getElementById('ch').getContext('2d'),{
+    type:'bar',
+    data:{labels:sorted.map(([k])=>k),datasets:[{data:sorted.map(([,v])=>v),backgroundColor:['rgba(79,156,249,.6)','rgba(52,211,153,.5)','rgba(251,191,36,.5)'],borderColor:['#4f9cf9','#34d399','#fbbf24'],borderWidth:1,borderRadius:6}]},
+    options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#3d5570',font:{size:12}},grid:{color:'rgba(255,255,255,0.03)'}},y:{ticks:{color:'#3d5570',font:{size:11}},grid:{color:'rgba(255,255,255,0.03)'},max:100,min:0}}}
+  });
+
+  const sh=d.shap;
+  if(sh.top_features&&sh.top_features.length){
+    const mx=Math.max(...sh.top_features.map(s=>Math.abs(s.shap_value)))||1;
+    document.getElementById('sRows').innerHTML=sh.top_features.map(s=>{
+      const pct=(Math.abs(s.shap_value)/mx*100).toFixed(1);
+      return `<div class="sr"><div class="sl">${s.feature}</div><div class="st"><div class="${s.shap_value>=0?'sp':'sn'}" style="width:${pct}%"></div></div><div class="sv">${s.shap_value>=0?'+':''}${s.shap_value.toFixed(3)}</div></div>`;
+    }).join('');
+  }
+
+  if(typeof sh.image_pct!=='undefined'){
+    document.getElementById('mods').style.display='grid';
+    document.getElementById('ip').textContent=`${sh.image_pct}%`;
+    document.getElementById('tp').textContent=`${sh.sensor_pct}%`;
+  }else{document.getElementById('mods').style.display='none';}
+
+  document.getElementById('rf').textContent=`${d.model_used} · ELE 4409 · Nimbus`;
+  document.getElementById('results').style.display='block';
+  document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});
+}
+</script>
+</body>
+</html>
