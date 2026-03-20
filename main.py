@@ -191,6 +191,14 @@ def root():
             "accuracy":meta["accuracy"],"classes":CLASSES,
             "model_expects":len(MODEL_FEATURE_COLS),"features":MODEL_FEATURE_COLS[:5]}
 
+from fastapi.responses import FileResponse
+import os
+
+@app.get("/")
+def serve_frontend():
+    return FileResponse(os.path.join(BASE, "index.html"))
+
+
 @app.get("/model-info")
 def model_info():
     return {**meta,"model_feature_count":len(MODEL_FEATURE_COLS)}
