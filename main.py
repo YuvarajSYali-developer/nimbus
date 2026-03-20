@@ -185,18 +185,19 @@ def make_prediction(feat_df: pd.DataFrame):
     return pred_label, round(float(proba[pred_idx])*100,1), scores, shap_res
 
 # ── Routes ────────────────────────────────────────────────────────────────────
-@app.get("/")
-def root():
-    return {"status":"🟢 running","model":meta["model_name"],
-            "accuracy":meta["accuracy"],"classes":CLASSES,
-            "model_expects":len(MODEL_FEATURE_COLS),"features":MODEL_FEATURE_COLS[:5]}
-
 from fastapi.responses import FileResponse
-import os
 
 @app.get("/")
 def serve_frontend():
     return FileResponse(os.path.join(BASE, "index.html"))
+
+@app.get("/health")
+def health():
+    return {
+        "status": "running",
+        "model": meta["model_name"],
+        "accuracy": meta["accuracy"]
+    }
 
 
 @app.get("/model-info")
